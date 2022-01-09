@@ -12,13 +12,8 @@ int main(int argc, char *argv[])
 {
 
     SharedMemory sharedMem(false, FileName, FileSize);
-    // sharedMem.checkMemoryContent();
 
-    for (const auto &a : sharedMem.readFileRaw())
-    {
-        std::cout << a;
-    }
-    std::cout << std::endl;
+    std::cout << sharedMem.readFileRaw() << std::endl;
 
     return 0;
 }

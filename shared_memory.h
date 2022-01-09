@@ -6,7 +6,7 @@
 #include <cstddef>
 #include <cstdlib>
 #include <memory>
-#include <boost/interprocess/file_mapping.hpp>
+#include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/mapped_region.hpp>
 
 using namespace boost::interprocess;
@@ -20,7 +20,7 @@ private:
     const std::size_t FileSize;
     void *addr;
     std::size_t size;
-    std::shared_ptr<file_mapping> m_file;
+    std::shared_ptr<shared_memory_object> m_file;
     std::shared_ptr<mapped_region> region;
 
 public:
@@ -28,23 +28,27 @@ public:
     {
         if (host)
         {
-            createFile();
+
+            shared_memory_object::remove(FileName.c_str());
 
             // Map the whole file with read-write permissions in this process
             mode = read_write;
+
+            m_file = std::make_shared<shared_memory_object>(create_only, FileName.c_str(), mode);
+
+            // Set size
+            m_file->truncate(FileSize);
         }
         else
         {
             std::cout << "Open the file mapping and map it as read-only..." << std::endl;
+
             mode = read_only;
+
+            m_file = std::make_shared<shared_memory_object>(open_only, FileName.c_str(), mode);
         }
 
-        // Create a file mapping
-        std::cout << "Create a file mapping..." << std::endl;
-
-        m_file = std::make_shared<file_mapping>(FileName.c_str(), mode);
-
-        region = std::make_shared<mapped_region>(*m_file, mode);
+        region = std::make_shared<mapped_region>(*m_file, mode); // !!!!!!!!!!!!!!!!!!!!!!!!!!
         // TODO: create multiple regions
 
         fetchAddressAndSize();
@@ -55,44 +59,18 @@ public:
         if (host)
         {
             // Remove on exit
-            deleteFile();
+            shared_memory_object::remove(FileName.c_str());
         }
     }
 
     void fetchAddressAndSize()
     {
         // Get the address of the mapped region
-        std::cout << "Get the address of the mapped region..." << std::endl;
+        std::cout << "Get the address and size of the mapped region..." << std::endl;
         addr = region->get_address();
         std::cout << "\tAddress:\t" << addr << std::endl;
         size = region->get_size();
-    }
-
-    void createFile()
-    {
-        if (not host)
-        {
-            throw "MUST BE HOST";
-        }
-        // Create a file
-        std::cout << "Creating file " << FileName << std::endl;
-        file_mapping::remove(FileName.c_str());
-        std::filebuf fbuf;
-        fbuf.open(FileName, std::ios_base::in | std::ios_base::out | std::ios_base::trunc | std::ios_base::binary);
-        // Set the size
-        fbuf.pubseekoff(FileSize - 1, std::ios_base::beg);
-        fbuf.sputc(0);
-        std::cout << "File created" << std::endl;
-    }
-
-    void deleteFile()
-    {
-        if (not host)
-        {
-            throw "MUST BE HOST";
-        }
-        std::cout << "Deleting file " << FileName << std::endl;
-        file_mapping::remove(FileName.c_str());
+        std::cout << "\tSize:\t\t" << size << std::endl;
     }
 
     void init()
@@ -136,18 +114,8 @@ public:
         }
     }
 
-    std::vector<char> readFileRaw()
+    std::string readFileRaw()
     {
-        // Now test it reading the file
-        std::cout << "Now test it reading the file..." << std::endl;
-        std::filebuf fbuf;
-        fbuf.open(FileName, std::ios_base::in | std::ios_base::binary);
-
-        // Read it to memory
-        std::cout << "Read it to memory..." << std::endl;
-        std::vector<char> vect(FileSize, 0);
-        fbuf.sgetn(&vect[0], std::streamsize(vect.size()));
-
-        return vect;
+        return std::string(static_cast<char *>(addr));
     }
 };

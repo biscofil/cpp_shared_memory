@@ -8,4 +8,4 @@
 
 // Define file names
 const std::string FileName = "file1.bin";
-const std::size_t FileSize = 100;
+const std::size_t FileSize = 10;
