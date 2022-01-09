@@ -1,30 +1,24 @@
-#include <boost/interprocess/shared_memory_object.hpp>
-#include <boost/interprocess/mapped_region.hpp>
-#include <cstring>
-#include <cstdlib>
-#include <string>
 #include <iostream>
-
-using namespace boost::interprocess;
+#include <fstream>
+#include <string>
+#include <vector>
+#include <cstring>
+#include <cstddef>
+#include <cstdlib>
+#include "common.h"
+#include "shared_memory.h"
 
 int main(int argc, char *argv[])
 {
 
-    // Open already created shared memory object.
-    shared_memory_object shm(open_only, "MySharedMemory", read_only);
+    SharedMemory sharedMem(false, FileName, FileSize);
+    // sharedMem.checkMemoryContent();
 
-    // Map the whole shared memory in this process
-    mapped_region region(shm, read_only);
-
-    // Check that memory was initialized to 1
-    char *mem = static_cast<char *>(region.get_address());
-    for (std::size_t i = 0; i < region.get_size(); ++i)
+    for (const auto &a : sharedMem.readFileRaw())
     {
-        if (*mem++ != 1)
-        {
-            std::cout << "Error checking memory" << std::endl;
-            return 1; // Error checking memory
-        }
+        std::cout << a;
     }
+    std::cout << std::endl;
+
     return 0;
 }
